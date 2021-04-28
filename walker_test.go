@@ -87,8 +87,7 @@ file bar/foo
 	}, bufWalk(b))
 	assert.NoError(t, err)
 
-	assert.Equal(t, `dir bar
-`, string(b.Bytes()))
+	assert.Equal(t, ``, string(b.Bytes()))
 
 	b.Reset()
 	err = Walk(context.Background(), d, &WalkOpt{
@@ -231,6 +230,102 @@ func TestWalkerMap(t *testing.T) {
 file _foo/bar2
 file _foo2
 `, string(b.Bytes()))
+}
+
+func TestMatchPrefix(t *testing.T) {
+	ok, partial := matchPrefix("foo", "foo", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("foo/bar/baz", "foo", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, true, partial)
+
+	ok, partial = matchPrefix("foo/bar/baz", "foo/bar", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, true, partial)
+
+	ok, partial = matchPrefix("foo/bar/baz", "foo/bax", false)
+	assert.Equal(t, false, ok)
+
+	ok, partial = matchPrefix("foo/bar/baz", "foo/bar/baz", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("f*", "foo", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("foo/bar/*", "foo", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, true, partial)
+
+	ok, partial = matchPrefix("foo/*/baz", "foo", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, true, partial)
+
+	ok, partial = matchPrefix("*/*/baz", "foo", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, true, partial)
+
+	ok, partial = matchPrefix("*/bar/baz", "foo/bar", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, true, partial)
+
+	ok, partial = matchPrefix("*/bar/baz", "foo/bax", false)
+	assert.Equal(t, false, ok)
+
+	ok, partial = matchPrefix("*/*/baz", "foo/bar/baz", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("**/baz", "baz", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("**/baz", "foo/baz", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("**/baz", "foo/bar/baz", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("foo/**/baz", "foo/bar/baz", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("**", "foo/bar/baz", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("**", "foo/bar/baz", true)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, true, partial)
+
+	ok, partial = matchPrefix("foo/**", "foo/bar/baz", true)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, true, partial)
+
+	ok, partial = matchPrefix("foo/**", "bar/baz", true)
+	assert.Equal(t, false, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("**/**/baz", "foo/bar/baz", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("**/b*", "foo/bar/baz", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("**/foo/bar", "foo/bar/baz/foo/bar", false)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, false, partial)
+
+	ok, partial = matchPrefix("**/foo/bar", "foo/bar/baz/foo/baz", false)
+	assert.Equal(t, false, ok)
+	assert.Equal(t, true, partial)
 }
 
 func bufWalk(buf *bytes.Buffer) filepath.WalkFunc {
